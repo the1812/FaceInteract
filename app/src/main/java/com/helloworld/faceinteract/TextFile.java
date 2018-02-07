@@ -11,7 +11,7 @@ public class TextFile extends FileBase implements IFileBase<TextFile>
     private String text;
 
     @Override
-    public TextFile load() throws FileNotFoundException
+    public TextFile load()
     {
         StringBuilder builder = new StringBuilder();
         try

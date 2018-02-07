@@ -18,7 +18,7 @@ public class BinaryFile extends FileBase implements IFileBase<BinaryFile>
     private byte[] data;
 
     @Override
-    public BinaryFile load() throws FileNotFoundException
+    public BinaryFile load()
     {
         try
         {

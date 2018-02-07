@@ -16,7 +16,7 @@ public class PhotoScanner
 {
     private Bitmap bitmap;
     private byte[] nv21Data;
-    private FaceDataManager manager;
+    private EngineManager engineManager;
     private List<AFD_FSDKFace> sdkFaces;
     public PhotoScanner(Bitmap bitmap)
     {
@@ -57,14 +57,14 @@ public class PhotoScanner
     }
     public List<Rect> scan()
     {
-        if (manager == null)
+        if (engineManager == null)
         {
-            Log.e("Null error", "PhotoScanner.manager is null");
+            Log.e("Null error", "PhotoScanner.engineManager is null");
             return new ArrayList<>();
         }
         convertToNv21();
         List<AFD_FSDKFace> faces = new ArrayList<>();
-        int errorCode = manager.getFaceDetectionEngine()
+        int errorCode = engineManager.getFaceDetectionEngine()
                 .AFD_FSDK_StillImageFaceDetection(nv21Data,
                         bitmap.getWidth(), bitmap.getHeight(),
                         AFD_FSDKEngine.CP_PAF_NV21, faces)
@@ -108,8 +108,8 @@ public class PhotoScanner
         return sdkFaces;
     }
 
-    public void setManager(FaceDataManager manager)
+    public void setEngineManager(EngineManager engineManager)
     {
-        this.manager = manager;
+        this.engineManager = engineManager;
     }
 }

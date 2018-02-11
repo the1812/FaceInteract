@@ -25,7 +25,7 @@ public class PermissionHelper
             action.invoke();
         }
     }
-    private void onRequestPermissionsResult(int requestCode, @NonNull int[] grantResults)
+    public void onRequestPermissionsResult(int requestCode, @NonNull int[] grantResults)
     {
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
         {

@@ -77,7 +77,8 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void invoke()
             {
-                final CameraScanner cameraScanner = new CameraScanner(MainActivity.this, textureView, imageView);
+                final CameraScanner cameraScanner = new CameraScanner(MainActivity.this, textureView);
+                cameraScanner.setEngineManager(engineManager);
                 cameraScanner.start();
                 textureView.setOnClickListener(new View.OnClickListener()
                 {

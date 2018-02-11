@@ -17,8 +17,8 @@ public class PhotoScanner
     private Bitmap bitmap;
     private byte[] nv21Data;
     private EngineManager engineManager;
-    private List<AFD_FSDKFace> sdkFaces;
-    public PhotoScanner(Bitmap bitmap)
+
+    PhotoScanner(Bitmap bitmap)
     {
         this.bitmap = bitmap;
     }
@@ -55,7 +55,7 @@ public class PhotoScanner
             }
         }
     }
-    public List<Rect> scan()
+    private List<Rect> scan()
     {
         if (engineManager == null)
         {
@@ -77,7 +77,7 @@ public class PhotoScanner
             {
                 list.add(face.getRect());
             }
-            sdkFaces = faces;
+//            List<AFD_FSDKFace> sdkFaces = faces;
         }
         else
         {
@@ -102,10 +102,6 @@ public class PhotoScanner
             canvas.drawRect(rect, paint);
         }
         return bitmap;
-    }
-    public List<AFD_FSDKFace> getSdkFaces()
-    {
-        return sdkFaces;
     }
 
     public void setEngineManager(EngineManager engineManager)

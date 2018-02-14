@@ -19,7 +19,7 @@ public class FaceDataManager
         Log.d("Manager", "constructor start");
         this.storagePath = storagePath;
         faces = new ArrayList<>();
-
+        loadFaces();
     }
 
     private String getDataFileName(Face face)

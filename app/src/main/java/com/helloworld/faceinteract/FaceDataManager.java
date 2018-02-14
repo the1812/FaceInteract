@@ -14,7 +14,7 @@ public class FaceDataManager
     private String storagePath;
     private List<Face> faces;
 
-    public FaceDataManager(String storagePath)
+    FaceDataManager(String storagePath)
     {
         Log.d("Manager", "constructor start");
         this.storagePath = storagePath;
@@ -59,6 +59,10 @@ public class FaceDataManager
             Log.e("Error","File not exist");
         }
         return Arrays.asList(textFile.getText().split("\n"));
+    }
+    public List<Face> getFaces()
+    {
+        return faces;
     }
     public void saveFace(Face face)
     {

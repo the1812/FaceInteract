@@ -110,6 +110,7 @@ public class MainActivity extends AppCompatActivity
             {
                 Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
                 PhotoScanner scanner = new PhotoScanner(bitmap);
+                scanner.setFaceDataManager(dataManager);
                 scanner.setEngineManager(engineManager);
                 imageView.setImageBitmap(scanner.getScannedBitmap());
             }

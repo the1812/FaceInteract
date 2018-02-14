@@ -1,22 +1,29 @@
 package com.helloworld.faceinteract;
 
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.Rect;
+import android.graphics.*;
 import android.util.Log;
 import com.arcsoft.facedetection.AFD_FSDKEngine;
 import com.arcsoft.facedetection.AFD_FSDKError;
 import com.arcsoft.facedetection.AFD_FSDKFace;
+import com.arcsoft.facerecognition.AFR_FSDKEngine;
+import com.arcsoft.facerecognition.AFR_FSDKError;
+import com.arcsoft.facerecognition.AFR_FSDKFace;
+import com.arcsoft.facerecognition.AFR_FSDKMatching;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class PhotoScanner
 {
+    public static float MatchMinimumScore = 0.7f;
+
     private Bitmap bitmap;
     private byte[] nv21Data;
     private EngineManager engineManager;
+    private FaceDataManager faceDataManager;
+    private List<Rect> rectList;
+    private List<AFD_FSDKFace> sdkFaces;
+    private List<String> infoList;
 
     PhotoScanner(Bitmap bitmap)
     {
@@ -55,39 +62,81 @@ public class PhotoScanner
             }
         }
     }
-    private List<Rect> scan()
+    private void scan()
     {
         if (engineManager == null)
         {
             Log.e("Null error", "PhotoScanner.engineManager is null");
-            return new ArrayList<>();
+            return;
         }
         convertToNv21();
-        List<AFD_FSDKFace> faces = new ArrayList<>();
+        sdkFaces = new ArrayList<>();
         int errorCode = engineManager.getFaceDetectionEngine()
                 .AFD_FSDK_StillImageFaceDetection(nv21Data,
                         bitmap.getWidth(), bitmap.getHeight(),
-                        AFD_FSDKEngine.CP_PAF_NV21, faces)
+                        AFD_FSDKEngine.CP_PAF_NV21, sdkFaces)
                 .getCode();
 
-        List<Rect> list = new ArrayList<>();
+        rectList = new ArrayList<>();
+        infoList = new ArrayList<>();
         if (errorCode == AFD_FSDKError.MOK)
         {
-            for (AFD_FSDKFace face : faces)
+            for (AFD_FSDKFace sdkFace : sdkFaces)
             {
-                list.add(face.getRect());
+                rectList.add(sdkFace.getRect());
+                infoList.add(match(toRecognitionFace(sdkFace)));
             }
-//            List<AFD_FSDKFace> sdkFaces = faces;
         }
         else
         {
             Log.e("Error", "Face detection failed");
         }
-        return list;
+    }
+    private String match(AFR_FSDKFace sdkFace)
+    {
+        for (Face face : faceDataManager.getFaces())
+        {
+            AFR_FSDKMatching matching = new AFR_FSDKMatching();
+            int errorCode = engineManager.getFaceRecognitionEngine()
+                    .AFR_FSDK_FacePairMatching(face.getFirstSdkFace(), sdkFace, matching)
+                    .getCode();
+            if (errorCode == AFR_FSDKError.MOK)
+            {
+                if (matching.getScore() >= MatchMinimumScore)
+                {
+                    return face.getName();
+                }
+            }
+            else
+            {
+                Log.e("Error", "Face matching failed");
+            }
+        }
+        return null;
+    }
+    private AFR_FSDKFace toRecognitionFace(AFD_FSDKFace detectionFace)
+    {
+        AFR_FSDKFace recognitionFace = new AFR_FSDKFace();
+        int errorCode = engineManager.getFaceRecognitionEngine()
+                .AFR_FSDK_ExtractFRFeature(nv21Data,
+                        bitmap.getWidth(), bitmap.getHeight(),
+                        ImageFormat.NV21, detectionFace.getRect(),
+                        AFR_FSDKEngine.AFR_FOC_0, recognitionFace)
+                .getCode();
+        if (errorCode == AFR_FSDKError.MOK)
+        {
+            return recognitionFace;
+        }
+        else
+        {
+            Log.e("Photo Scanner", "Convert failed");
+            return null;
+        }
     }
     public Bitmap getScannedBitmap()
     {
-        List<Rect> rectList = scan();
+        scan();
+
         Bitmap result = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), bitmap.getConfig());
         Canvas canvas = new Canvas(result);
         Paint paint = new Paint();
@@ -107,5 +156,15 @@ public class PhotoScanner
     public void setEngineManager(EngineManager engineManager)
     {
         this.engineManager = engineManager;
+    }
+
+    public void setFaceDataManager(FaceDataManager faceDataManager)
+    {
+        this.faceDataManager = faceDataManager;
+    }
+
+    public Face extractFace()
+    {
+        return new Face(infoList.get(0), sdkFaces.get(0));
     }
 }

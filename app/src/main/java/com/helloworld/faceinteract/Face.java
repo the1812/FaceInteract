@@ -1,5 +1,6 @@
 package com.helloworld.faceinteract;
 
+import com.arcsoft.facedetection.AFD_FSDKFace;
 import com.arcsoft.facerecognition.AFR_FSDKFace;
 
 import java.util.ArrayList;
@@ -18,6 +19,10 @@ public class Face
     {
         this(name);
         faces.add(sdkFace);
+    }
+    public Face(String name, AFD_FSDKFace detectionFace)
+    {
+
     }
     public String getName()
     {

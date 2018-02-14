@@ -3,4 +3,8 @@
   <string name="select_photo">Select Photo</string>
   <string name="open_camera">Open Camera</string>
   <string name="photo_description">Scanned Photo</string>
+  <string name="save_face">Save Face</string>
+  <string name="name">Name</string>
+  <string name="ok">OK</string>
+  <string name="cancel">Cancel</string>
 </resources>

@@ -1,17 +1,19 @@
 package com.helloworld.faceinteract;
 
 import android.Manifest;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.TextureView;
 import android.view.View;
-import android.widget.ImageView;
+import android.widget.*;
 
 import java.io.IOException;
 
@@ -22,7 +24,11 @@ public class MainActivity extends AppCompatActivity
     private EngineManager engineManager;
     private ImageView imageView;
     private TextureView textureView;
+    private TextView textView;
+    private Button buttonSaveFace;
     private PermissionHelper permissionHelper;
+    private Face currentFace;
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -32,6 +38,7 @@ public class MainActivity extends AppCompatActivity
         engineManager = new EngineManager();
         imageView = (ImageView) findViewById(R.id.imageView);
         textureView = (TextureView) findViewById(R.id.textureView);
+        textView = (TextView) findViewById(R.id.textView);
         permissionHelper = new PermissionHelper(this);
         findViewById(R.id.buttonSelectPhoto).setOnClickListener(new View.OnClickListener()
         {
@@ -53,6 +60,16 @@ public class MainActivity extends AppCompatActivity
                 openCamera();
             }
         });
+        buttonSaveFace = (Button) findViewById(R.id.buttonSaveFace);
+        buttonSaveFace.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
+            {
+                showInputNameDialog();
+            }
+        });
+        buttonSaveFace.setVisibility(View.GONE);
     }
     @Override
     protected void onDestroy()
@@ -94,6 +111,49 @@ public class MainActivity extends AppCompatActivity
             }
         });
     }
+    private void showInputNameDialog()
+    {
+        AlertDialog.Builder alert = new AlertDialog.Builder(this);
+
+        LinearLayout layout= new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(50,15,50,15);
+
+        alert.setTitle(R.string.save_face);
+
+        final TextView nameText = new TextView(this);
+        nameText.setText(R.string.name);
+        final EditText nameInput = new EditText(this);
+
+        layout.addView(nameText);
+        layout.addView(nameInput);
+
+        alert.setView(layout);
+        alert.setPositiveButton(R.string.cancel,
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog,
+                                        int whichButton) {
+                    }
+                });
+        alert.setNegativeButton(R.string.ok,
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog,
+                                        int whichButton) {
+                        String name = nameInput.getText().toString();
+                        currentFace.setName(name);
+                        saveFace();
+                    }
+                });
+        alert.show();
+    }
+    private void saveFace()
+    {
+        if (currentFace == null || currentFace.getName() == null)
+        {
+            return;
+        }
+        dataManager.saveFace(currentFace);
+    }
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data)
     {
@@ -113,6 +173,16 @@ public class MainActivity extends AppCompatActivity
                 scanner.setFaceDataManager(dataManager);
                 scanner.setEngineManager(engineManager);
                 imageView.setImageBitmap(scanner.getScannedBitmap());
+                currentFace = scanner.extractFace();
+                if (currentFace != null)
+                {
+                    buttonSaveFace.setVisibility(View.GONE);
+                    textView.setText(currentFace.getName());
+                }
+                else
+                {
+                    buttonSaveFace.setVisibility(View.VISIBLE);
+                }
             }
             catch (IOException e)
             {

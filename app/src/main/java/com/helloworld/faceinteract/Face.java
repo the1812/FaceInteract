@@ -3,6 +3,7 @@ package com.helloworld.faceinteract;
 import com.arcsoft.facedetection.AFD_FSDKFace;
 import com.arcsoft.facerecognition.AFR_FSDKFace;
 
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,6 +29,7 @@ public class Face
     {
         return name;
     }
+    public void setName(String name) { this.name = name; }
     public void addSdkFace(AFR_FSDKFace sdkFace)
     {
         faces.add(sdkFace);

@@ -165,6 +165,10 @@ public class PhotoScanner
 
     public Face extractFace()
     {
+        if (sdkFaces.isEmpty())
+        {
+            return null;
+        }
         return new Face(infoList.get(0), sdkFaces.get(0));
     }
 }

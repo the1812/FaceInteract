@@ -20,7 +20,7 @@ import java.io.IOException;
 public class MainActivity extends AppCompatActivity
 {
     private final int PickPhotoRequest = 1;
-    private FaceDataManager dataManager;
+    private FaceDataManager faceDataManager;
     private EngineManager engineManager;
     private ImageView imageView;
     private TextureView textureView;
@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        dataManager = new FaceDataManager("/face-interact");
+        faceDataManager = new FaceDataManager("/face-interact");
         engineManager = new EngineManager();
         imageView = (ImageView) findViewById(R.id.imageView);
         textureView = (TextureView) findViewById(R.id.textureView);
@@ -96,6 +96,7 @@ public class MainActivity extends AppCompatActivity
             {
                 final CameraScanner cameraScanner = new CameraScanner(MainActivity.this, textureView);
                 cameraScanner.setEngineManager(engineManager);
+                cameraScanner.setFaceDataManager(faceDataManager);
                 cameraScanner.start();
                 textureView.setOnClickListener(new View.OnClickListener()
                 {
@@ -106,6 +107,7 @@ public class MainActivity extends AppCompatActivity
                         imageView.setImageBitmap(cameraScanner.getScannedBitmap());
                         imageView.setVisibility(View.VISIBLE);
                         textureView.setVisibility(View.GONE);
+                        loadFace(cameraScanner.extractFace());
                     }
                 });
             }
@@ -152,7 +154,20 @@ public class MainActivity extends AppCompatActivity
         {
             return;
         }
-        dataManager.saveFace(currentFace);
+        faceDataManager.saveFace(currentFace);
+    }
+    private void loadFace(Face newFace)
+    {
+        currentFace = newFace;
+        if (currentFace != null)
+        {
+            buttonSaveFace.setVisibility(View.GONE);
+            textView.setText(currentFace.getName());
+        }
+        else
+        {
+            buttonSaveFace.setVisibility(View.VISIBLE);
+        }
     }
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data)
@@ -170,19 +185,10 @@ public class MainActivity extends AppCompatActivity
             {
                 Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
                 PhotoScanner scanner = new PhotoScanner(bitmap);
-                scanner.setFaceDataManager(dataManager);
+                scanner.setFaceDataManager(faceDataManager);
                 scanner.setEngineManager(engineManager);
                 imageView.setImageBitmap(scanner.getScannedBitmap());
-                currentFace = scanner.extractFace();
-                if (currentFace != null)
-                {
-                    buttonSaveFace.setVisibility(View.GONE);
-                    textView.setText(currentFace.getName());
-                }
-                else
-                {
-                    buttonSaveFace.setVisibility(View.VISIBLE);
-                }
+                loadFace(scanner.extractFace());
             }
             catch (IOException e)
             {

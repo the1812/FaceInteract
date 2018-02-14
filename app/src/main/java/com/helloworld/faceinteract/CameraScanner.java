@@ -20,9 +20,11 @@ import java.util.Arrays;
 public class CameraScanner
 {
     private EngineManager engineManager;
+    private FaceDataManager faceDataManager;
     private SessionManager sessionManager;
     private CameraCreator cameraCreator;
     private Bitmap bitmap;
+    private Face extractedFace;
 
     CameraScanner(Context context, final TextureView textureView)
     {
@@ -57,11 +59,23 @@ public class CameraScanner
     {
         PhotoScanner scanner = new PhotoScanner(bitmap);
         scanner.setEngineManager(engineManager);
-        return scanner.getScannedBitmap();
+        scanner.setFaceDataManager(faceDataManager);
+        Bitmap result = scanner.getScannedBitmap();
+        extractedFace = scanner.extractFace();
+        return result;
+    }
+    public Face extractFace()
+    {
+        return extractedFace;
     }
     public void setEngineManager(EngineManager engineManager)
     {
         this.engineManager = engineManager;
+    }
+
+    public void setFaceDataManager(FaceDataManager faceDataManager)
+    {
+        this.faceDataManager = faceDataManager;
     }
 }
 class CameraCreator

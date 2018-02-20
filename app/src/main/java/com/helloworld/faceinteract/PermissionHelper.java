@@ -8,12 +8,12 @@ import android.util.SparseArray;
 public class PermissionHelper
 {
     private AppCompatActivity context;
-    private SparseArray<Action> permissions = new SparseArray<>();
+    private SparseArray<Runnable> permissions = new SparseArray<>();
     PermissionHelper(AppCompatActivity activity)
     {
         context = activity;
     }
-    public void requestPermission(String permission, Action action)
+    public void requestPermission(String permission, Runnable action)
     {
         permissions.put(permission.hashCode(), action);
         if (context.checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED)
@@ -22,15 +22,15 @@ public class PermissionHelper
         }
         else
         {
-            action.invoke();
+            action.run();
         }
     }
     public void onRequestPermissionsResult(int requestCode, @NonNull int[] grantResults)
     {
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
         {
-            Action action = permissions.get(requestCode);
-            action.invoke();
+            Runnable action = permissions.get(requestCode);
+            action.run();
         }
     }
 }

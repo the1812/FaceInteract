@@ -89,10 +89,10 @@ public class MainActivity extends AppCompatActivity
     }
     private void openCamera()
     {
-        permissionHelper.requestPermission(Manifest.permission.CAMERA, new Action()
+        permissionHelper.requestPermission(Manifest.permission.CAMERA, new Runnable()
         {
             @Override
-            public void invoke()
+            public void run()
             {
                 final CameraScanner cameraScanner = new CameraScanner(MainActivity.this, textureView);
                 cameraScanner.setEngineManager(engineManager);

@@ -1,9 +1,7 @@
 package com.helloworld.faceinteract;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.ImageFormat;
+import android.graphics.*;
 import android.hardware.camera2.*;
 import android.media.Image;
 import android.media.ImageReader;
@@ -22,6 +20,7 @@ public class CameraScanner
     private EngineManager engineManager;
     private FaceDataManager faceDataManager;
     private SessionManager sessionManager;
+    private PhotoScanner photoScanner;
     private CameraCreator cameraCreator;
     private Bitmap bitmap;
     private Face extractedFace;
@@ -57,11 +56,28 @@ public class CameraScanner
 
     public Bitmap getScannedBitmap()
     {
-        PhotoScanner scanner = new PhotoScanner(bitmap);
-        scanner.setEngineManager(engineManager);
-        scanner.setFaceDataManager(faceDataManager);
-        Bitmap result = scanner.getScannedBitmap();
-        extractedFace = scanner.extractFace();
+        photoScanner = new PhotoScanner(bitmap);
+        photoScanner.setEngineManager(engineManager);
+        photoScanner.setFaceDataManager(faceDataManager);
+        Bitmap result = photoScanner.getScannedBitmap();
+        extractedFace = photoScanner.extractFace();
+        return result;
+    }
+    public Bitmap getScannedRects()
+    {
+        Bitmap result = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), bitmap.getConfig());
+        Canvas canvas = new Canvas(result);
+        Paint paint = new Paint();
+        paint.setARGB(128,255,160,0);
+        paint.setAntiAlias(true);
+        paint.setStrokeWidth(2.0f);
+        paint.setStyle(Paint.Style.STROKE);
+
+        canvas.drawColor(Color.TRANSPARENT);
+        for (Rect rect : photoScanner.getRectList())
+        {
+            canvas.drawRect(rect, paint);
+        }
         return result;
     }
     public Face extractFace()

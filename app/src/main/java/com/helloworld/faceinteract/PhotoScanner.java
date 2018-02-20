@@ -152,6 +152,10 @@ public class PhotoScanner
         }
         return bitmap;
     }
+    public List<Rect> getRectList()
+    {
+        return rectList;
+    }
 
     public void setEngineManager(EngineManager engineManager)
     {

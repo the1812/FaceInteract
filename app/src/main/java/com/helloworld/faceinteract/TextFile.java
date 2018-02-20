@@ -31,7 +31,8 @@ public class TextFile extends FileBase implements IFileBase<TextFile>
         {
             ex.printStackTrace();
         }
-        return null;
+        setText("");
+        return this;
     }
 
     @Override

@@ -15,6 +15,9 @@ import android.view.TextureView;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+/**
+ * Scan images from camera
+ */
 public class CameraScanner
 {
     private EngineManager engineManager;
@@ -23,32 +26,47 @@ public class CameraScanner
     private PhotoScanner photoScanner;
     private CameraCreator cameraCreator;
     private Bitmap bitmap;
+    private Bitmap previewBitmap;
     private Face extractedFace;
 
+    /**
+     * Create {@link CameraScanner}
+     * @param context App activity
+     * @param textureView {@link TextureView} to show preview
+     */
     CameraScanner(Context context, final TextureView textureView)
     {
         CameraManager manager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
+        //Create camera
         cameraCreator = new CameraCreator(context, manager);
+        //Set preview size
         cameraCreator.setPreviewSize(new Size(textureView.getMeasuredWidth(), textureView.getMeasuredHeight()));
         ImageReader.OnImageAvailableListener imageAvailableListener = new ImageReader.OnImageAvailableListener()
         {
             @Override
             public void onImageAvailable(ImageReader imageReader)
             {
+                //When picture is taken...
                 cameraCreator.getCamera().close();
                 Image image = imageReader.acquireNextImage();
                 ByteBuffer buffer = image.getPlanes()[0].getBuffer();
                 byte[] data = new byte[buffer.remaining()];
+                //Save picture data in this.bitmap
                 bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
             }
         };
         cameraCreator.createImageReader(imageAvailableListener);
         sessionManager = new SessionManager(cameraCreator, textureView);
     }
+
+    /**
+     * Start preview
+     */
     public void start()
     {
         sessionManager.createPreview();
     }
+
     public void takePicture()
     {
         sessionManager.takePicture();
@@ -59,13 +77,24 @@ public class CameraScanner
         photoScanner = new PhotoScanner(bitmap);
         photoScanner.setEngineManager(engineManager);
         photoScanner.setFaceDataManager(faceDataManager);
+        //Get scanned bitmap by PhotoScanner
         Bitmap result = photoScanner.getScannedBitmap();
+        //Save face
         extractedFace = photoScanner.extractFace();
         return result;
     }
+
+    /**
+     * Get scanned rectangles for preview
+     * @return Scanned rectangles in transparent background
+     */
     public Bitmap getScannedRects()
     {
-        Bitmap result = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), bitmap.getConfig());
+        Log.e("Camera Scanner", "TODO: Create custom preview and save preivew image to this.previewBitmap");
+        Bitmap result = Bitmap.createBitmap(
+                previewBitmap.getWidth(),
+                previewBitmap.getHeight(),
+                previewBitmap.getConfig());
         Canvas canvas = new Canvas(result);
         Paint paint = new Paint();
         paint.setARGB(128,255,160,0);
@@ -73,6 +102,7 @@ public class CameraScanner
         paint.setStrokeWidth(2.0f);
         paint.setStyle(Paint.Style.STROKE);
 
+        //Transparent background
         canvas.drawColor(Color.TRANSPARENT);
         for (Rect rect : photoScanner.getRectList())
         {
@@ -80,6 +110,11 @@ public class CameraScanner
         }
         return result;
     }
+
+    /**
+     * Get extracted face after calling getScannedBitmap
+     * @return Extracted face
+     */
     public Face extractFace()
     {
         return extractedFace;
@@ -94,6 +129,10 @@ public class CameraScanner
         this.faceDataManager = faceDataManager;
     }
 }
+
+/**
+ * Helper class for creating camera
+ */
 class CameraCreator
 {
     private CameraManager manager;
@@ -102,30 +141,38 @@ class CameraCreator
     private CameraDevice camera;
     private ImageReader imageReader;
 
+    /**
+     * Create {@link CameraCreator}
+     * @param context App activity
+     * @param cameraManager {@link CameraManager} to create camera
+     */
     CameraCreator(Context context, CameraManager cameraManager)
     {
         assert manager != null;
         assert context != null;
         manager = cameraManager;
 
+        //Start background thread
         HandlerThread thread = new HandlerThread("Camera2");
         thread.start();
         childHandler = new Handler(thread.getLooper());
         mainHandler = new Handler(context.getMainLooper());
 
-        try
+        try //Open camera
         {
             CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback()
             {
                 @Override
                 public void onOpened(CameraDevice cameraDevice)
                 {
+                    //Save the active camera
                     camera = cameraDevice;
                 }
 
                 @Override
                 public void onDisconnected(CameraDevice cameraDevice)
                 {
+                    //Close current camera
                     camera.close();
                     camera = null;
                 }
@@ -148,6 +195,11 @@ class CameraCreator
         }
 
     }
+
+    /**
+     * Create {@link ImageReader} and set listener on image available
+     * @param imageAvailableListener Listener on image available
+     */
     public void createImageReader(ImageReader.OnImageAvailableListener imageAvailableListener)
     {
         imageReader = ImageReader.newInstance(getPreviewSize().getWidth(), getPreviewSize().getHeight(),
@@ -164,6 +216,10 @@ class CameraCreator
         this.previewSize = previewSize;
     }
 
+    /**
+     * Get active camera
+     * @return {@link CameraDevice}
+     */
     public CameraDevice getCamera()
     {
         return camera;
@@ -174,11 +230,19 @@ class CameraCreator
         return childHandler;
     }
 
+    /**
+     * Get {@link ImageReader} created by createImageReader
+     * @return {@link ImageReader}
+     */
     public ImageReader getImageReader()
     {
         return imageReader;
     }
 }
+
+/**
+ * Manage sessions between camera and app
+ */
 class SessionManager
 {
     private CameraCreator cameraCreator;
@@ -186,11 +250,20 @@ class SessionManager
     private CaptureRequest.Builder previewBuilder;
     private CameraCaptureSession captureSession;
 
+    /**
+     * Create {@link SessionManager}
+     * @param creator {@link CameraCreator} for camera data
+     * @param textureView {@link TextureView} to show preview
+     */
     SessionManager(final CameraCreator creator, TextureView textureView)
     {
         this.textureView = textureView;
         cameraCreator = creator;
     }
+
+    /**
+     * Create preview session
+     */
     public void createPreview()
     {
         try
@@ -198,6 +271,7 @@ class SessionManager
             previewBuilder = cameraCreator.getCamera().createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             Surface surface = new Surface(textureView.getSurfaceTexture());
             previewBuilder.addTarget(surface);
+
             cameraCreator.getCamera().createCaptureSession(Arrays.asList(surface, cameraCreator.getImageReader().getSurface()), new CameraCaptureSession.StateCallback()
             {
                 @Override
@@ -228,6 +302,10 @@ class SessionManager
             e.printStackTrace();
         }
     }
+
+    /**
+     * Take picture from camera
+     */
     public void takePicture()
     {
         CaptureRequest.Builder takePictureRequestBuilder;

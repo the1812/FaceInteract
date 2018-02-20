@@ -13,8 +13,14 @@ import com.arcsoft.facerecognition.AFR_FSDKMatching;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Scan faces in a photo
+ */
 public class PhotoScanner
 {
+    /**
+     * Minimum score for face recognition
+     */
     public static float MatchMinimumScore = 0.7f;
 
     private Bitmap bitmap;
@@ -29,6 +35,10 @@ public class PhotoScanner
     {
         this.bitmap = bitmap;
     }
+
+    /**
+     * Convert this.bitmap to NV21 format and save in this.nv21Data
+     */
     private void convertToNv21()
     {
         int width = bitmap.getWidth();
@@ -62,6 +72,10 @@ public class PhotoScanner
             }
         }
     }
+
+    /**
+     * Start scanning
+     */
     private void scan()
     {
         if (engineManager == null)
@@ -92,6 +106,12 @@ public class PhotoScanner
             Log.e("Error", "Face detection failed");
         }
     }
+
+    /**
+     * Find name of specific face
+     * @param sdkFace Specific face
+     * @return Name of face, null if not found
+     */
     private String match(AFR_FSDKFace sdkFace)
     {
         for (Face face : faceDataManager.getFaces())
@@ -114,6 +134,12 @@ public class PhotoScanner
         }
         return null;
     }
+
+    /**
+     * Convert detection face to recognition face
+     * @param detectionFace Detection face
+     * @return Recognition face
+     */
     private AFR_FSDKFace toRecognitionFace(AFD_FSDKFace detectionFace)
     {
         AFR_FSDKFace recognitionFace = new AFR_FSDKFace();
@@ -133,10 +159,12 @@ public class PhotoScanner
             return null;
         }
     }
+
     public Bitmap getScannedBitmap()
     {
         scan();
 
+        // Create new bitmap
         Bitmap result = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), bitmap.getConfig());
         Canvas canvas = new Canvas(result);
         Paint paint = new Paint();
@@ -145,9 +173,11 @@ public class PhotoScanner
         paint.setStrokeWidth(2.0f);
         paint.setStyle(Paint.Style.STROKE);
 
+        //Draw original bitmap
         canvas.drawBitmap(bitmap,0,0,null);
         for (Rect rect : rectList)
         {
+            //Draw face rectangle on bitmap
             canvas.drawRect(rect, paint);
         }
         return bitmap;
@@ -167,12 +197,16 @@ public class PhotoScanner
         this.faceDataManager = faceDataManager;
     }
 
+    /**
+     * Extract {@link Face} using the scanned data
+     * @return Face
+     */
     public Face extractFace()
     {
         if (sdkFaces.isEmpty())
         {
             return null;
         }
-        return new Face(infoList.get(0), sdkFaces.get(0));
+        return new Face(infoList.get(0), toRecognitionFace(sdkFaces.get(0)));
     }
 }

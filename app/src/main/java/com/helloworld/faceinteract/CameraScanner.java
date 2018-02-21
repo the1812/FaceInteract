@@ -10,7 +10,8 @@ import android.os.HandlerThread;
 import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
-import android.view.TextureView;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -26,21 +27,21 @@ public class CameraScanner
     private PhotoScanner photoScanner;
     private CameraCreator cameraCreator;
     private Bitmap bitmap;
-    private Bitmap previewBitmap;
+    private Thread previewThread;
     private Face extractedFace;
 
     /**
      * Create {@link CameraScanner}
      * @param context App activity
-     * @param textureView {@link TextureView} to show preview
+     * @param surfaceView {@link SurfaceView} to show preview
      */
-    CameraScanner(Context context, final TextureView textureView)
+    CameraScanner(Context context, final SurfaceView surfaceView)
     {
         CameraManager manager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
         //Create camera
         cameraCreator = new CameraCreator(context, manager);
         //Set preview size
-        cameraCreator.setPreviewSize(new Size(textureView.getMeasuredWidth(), textureView.getMeasuredHeight()));
+        cameraCreator.setPreviewSize(new Size(surfaceView.getMeasuredWidth(), surfaceView.getMeasuredHeight()));
         ImageReader.OnImageAvailableListener imageAvailableListener = new ImageReader.OnImageAvailableListener()
         {
             @Override
@@ -56,7 +57,7 @@ public class CameraScanner
             }
         };
         cameraCreator.createImageReader(imageAvailableListener);
-        sessionManager = new SessionManager(cameraCreator, textureView);
+        sessionManager = new SessionManager(cameraCreator, surfaceView);
     }
 
     /**
@@ -65,6 +66,59 @@ public class CameraScanner
     public void start()
     {
         sessionManager.createPreview();
+        previewThread = new Thread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                while (sessionManager.getSurfaceHolder() == null)
+                {
+                    try
+                    {
+                        Thread.sleep(100);
+                    }
+                    catch (InterruptedException e)
+                    {
+                        e.printStackTrace();
+                    }
+                }
+                while (sessionManager.getSurfaceHolder() != null)
+                {
+                    //How to get preview image???
+                    Canvas canvas = sessionManager.getSurfaceHolder().lockCanvas();
+                    //If preview image is already in this canvas...
+                    if (canvas != null)
+                    {
+                        Paint paint = new Paint();
+                        paint.setARGB(128,255,160,0);
+                        paint.setAntiAlias(true);
+                        paint.setStrokeWidth(2.0f);
+                        paint.setStyle(Paint.Style.STROKE);
+
+                        for (Rect rect : photoScanner.getRectList())
+                        {
+                            canvas.drawRect(rect, paint);
+                        }
+                    }
+                }
+            }
+        });
+        sessionManager.setSurfaceDestroyedHandler(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    previewThread.join();
+                }
+                catch (InterruptedException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        });
+        previewThread.start();
     }
 
     public void takePicture()
@@ -81,33 +135,6 @@ public class CameraScanner
         Bitmap result = photoScanner.getScannedBitmap();
         //Save face
         extractedFace = photoScanner.extractFace();
-        return result;
-    }
-
-    /**
-     * Get scanned rectangles for preview
-     * @return Scanned rectangles in transparent background
-     */
-    public Bitmap getScannedRects()
-    {
-        Log.e("Camera Scanner", "TODO: Create custom preview and save preivew image to this.previewBitmap");
-        Bitmap result = Bitmap.createBitmap(
-                previewBitmap.getWidth(),
-                previewBitmap.getHeight(),
-                previewBitmap.getConfig());
-        Canvas canvas = new Canvas(result);
-        Paint paint = new Paint();
-        paint.setARGB(128,255,160,0);
-        paint.setAntiAlias(true);
-        paint.setStrokeWidth(2.0f);
-        paint.setStyle(Paint.Style.STROKE);
-
-        //Transparent background
-        canvas.drawColor(Color.TRANSPARENT);
-        for (Rect rect : photoScanner.getRectList())
-        {
-            canvas.drawRect(rect, paint);
-        }
         return result;
     }
 
@@ -243,21 +270,23 @@ class CameraCreator
 /**
  * Manage sessions between camera and app
  */
-class SessionManager
+class SessionManager implements SurfaceHolder.Callback
 {
     private CameraCreator cameraCreator;
-    private TextureView textureView;
+    private SurfaceView surfaceView;
+    private SurfaceHolder surfaceHolder;
     private CaptureRequest.Builder previewBuilder;
     private CameraCaptureSession captureSession;
+    private Runnable surfaceDestroyedHandler;
 
     /**
      * Create {@link SessionManager}
      * @param creator {@link CameraCreator} for camera data
-     * @param textureView {@link TextureView} to show preview
+     * @param surfaceView {@link SurfaceView} to show preview
      */
-    SessionManager(final CameraCreator creator, TextureView textureView)
+    SessionManager(final CameraCreator creator, SurfaceView surfaceView)
     {
-        this.textureView = textureView;
+        this.surfaceView = surfaceView;
         cameraCreator = creator;
     }
 
@@ -269,7 +298,8 @@ class SessionManager
         try
         {
             previewBuilder = cameraCreator.getCamera().createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            Surface surface = new Surface(textureView.getSurfaceTexture());
+            Surface surface = surfaceView.getHolder().getSurface();
+
             previewBuilder.addTarget(surface);
 
             cameraCreator.getCamera().createCaptureSession(Arrays.asList(surface, cameraCreator.getImageReader().getSurface()), new CameraCaptureSession.StateCallback()
@@ -321,5 +351,37 @@ class SessionManager
         catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void surfaceCreated(SurfaceHolder surfaceHolder)
+    {
+        this.surfaceHolder = surfaceHolder;
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2)
+    {
+
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder surfaceHolder)
+    {
+        this.surfaceHolder = null;
+        if (surfaceDestroyedHandler != null)
+        {
+            surfaceDestroyedHandler.run();
+        }
+    }
+
+    public SurfaceHolder getSurfaceHolder()
+    {
+        return surfaceHolder;
+    }
+
+    public void setSurfaceDestroyedHandler(Runnable surfaceDestroyedHandler)
+    {
+        this.surfaceDestroyedHandler = surfaceDestroyedHandler;
     }
 }

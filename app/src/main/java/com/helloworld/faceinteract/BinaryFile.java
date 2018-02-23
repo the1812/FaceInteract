@@ -31,7 +31,8 @@ public class BinaryFile extends FileBase implements IFileBase<BinaryFile>
         {
             ex.printStackTrace();
         }
-        return null;
+        data = null;
+        return this;
     }
 
     @Override

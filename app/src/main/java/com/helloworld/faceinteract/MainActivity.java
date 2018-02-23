@@ -11,7 +11,7 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.TextureView;
+import android.view.SurfaceView;
 import android.view.View;
 import android.widget.*;
 
@@ -23,7 +23,8 @@ public class MainActivity extends AppCompatActivity
     private FaceDataManager faceDataManager;
     private EngineManager engineManager;
     private ImageView imageView;
-    private TextureView textureView;
+    //private TextureView textureView;
+    private SurfaceView surfaceView;
     private TextView textView;
     private Button buttonSaveFace;
     private PermissionHelper permissionHelper;
@@ -34,19 +35,24 @@ public class MainActivity extends AppCompatActivity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         faceDataManager = new FaceDataManager("/face-interact");
         engineManager = new EngineManager();
+
         imageView = (ImageView) findViewById(R.id.imageView);
-        textureView = (TextureView) findViewById(R.id.textureView);
+        //textureView = (TextureView) findViewById(R.id.textureView);
+        surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
         textView = (TextView) findViewById(R.id.textView);
+
         permissionHelper = new PermissionHelper(this);
+
         findViewById(R.id.buttonSelectPhoto).setOnClickListener(new View.OnClickListener()
         {
             @Override
             public void onClick(View view)
             {
                 imageView.setVisibility(View.VISIBLE);
-                textureView.setVisibility(View.GONE);
+                surfaceView.setVisibility(View.GONE);
                 pickPhoto();
             }
         });
@@ -56,10 +62,11 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View view)
             {
                 imageView.setVisibility(View.GONE);
-                textureView.setVisibility(View.VISIBLE);
+                surfaceView.setVisibility(View.VISIBLE);
                 openCamera();
             }
         });
+
         buttonSaveFace = (Button) findViewById(R.id.buttonSaveFace);
         buttonSaveFace.setOnClickListener(new View.OnClickListener()
         {
@@ -89,16 +96,16 @@ public class MainActivity extends AppCompatActivity
     }
     private void openCamera()
     {
-        permissionHelper.requestPermission(Manifest.permission.CAMERA, new Action()
+        permissionHelper.requestPermission(Manifest.permission.CAMERA, new Runnable()
         {
             @Override
-            public void invoke()
+            public void run()
             {
-                final CameraScanner cameraScanner = new CameraScanner(MainActivity.this, textureView);
+                final CameraScanner cameraScanner = new CameraScanner(MainActivity.this, surfaceView);
                 cameraScanner.setEngineManager(engineManager);
                 cameraScanner.setFaceDataManager(faceDataManager);
                 cameraScanner.start();
-                textureView.setOnClickListener(new View.OnClickListener()
+                surfaceView.setOnClickListener(new View.OnClickListener()
                 {
                     @Override
                     public void onClick(View view)
@@ -106,7 +113,7 @@ public class MainActivity extends AppCompatActivity
                         cameraScanner.takePicture();
                         imageView.setImageBitmap(cameraScanner.getScannedBitmap());
                         imageView.setVisibility(View.VISIBLE);
-                        textureView.setVisibility(View.GONE);
+                        surfaceView.setVisibility(View.GONE);
                         loadFace(cameraScanner.extractFace());
                     }
                 });

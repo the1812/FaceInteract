@@ -9,6 +9,9 @@ import com.arcsoft.facerecognition.AFR_FSDKError;
 import com.arcsoft.facerecognition.AFR_FSDKFace;
 import com.arcsoft.facetracking.AFT_FSDKEngine;
 
+/**
+ * Manage engines
+ */
 public class EngineManager
 {
 
@@ -38,6 +41,9 @@ public class EngineManager
         return faceTrackingEngine;
     }
 
+    /**
+     * Create engines
+     */
     public EngineManager()
     {
         faceRecognitionEngine = new AFR_FSDKEngine();
@@ -64,6 +70,10 @@ public class EngineManager
             Log.d("Info", "Engine loaded");
         }
     }
+
+    /**
+     * Dispose engines
+     */
     public void dispose()
     {
         if (faceRecognitionEngine != null)

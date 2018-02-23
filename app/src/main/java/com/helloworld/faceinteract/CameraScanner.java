@@ -1,9 +1,7 @@
 package com.helloworld.faceinteract;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.ImageFormat;
+import android.graphics.*;
 import android.hardware.camera2.*;
 import android.media.Image;
 import android.media.ImageReader;
@@ -12,44 +10,117 @@ import android.os.HandlerThread;
 import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
-import android.view.TextureView;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+/**
+ * Scan images from camera
+ */
 public class CameraScanner
 {
     private EngineManager engineManager;
     private FaceDataManager faceDataManager;
     private SessionManager sessionManager;
+    private PhotoScanner photoScanner;
     private CameraCreator cameraCreator;
     private Bitmap bitmap;
+    private Thread previewThread;
     private Face extractedFace;
 
-    CameraScanner(Context context, final TextureView textureView)
+    /**
+     * Create {@link CameraScanner}
+     * @param context App activity
+     * @param surfaceView {@link SurfaceView} to show preview
+     */
+    CameraScanner(Context context, final SurfaceView surfaceView)
     {
         CameraManager manager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
+        //Create camera
         cameraCreator = new CameraCreator(context, manager);
-        cameraCreator.setPreviewSize(new Size(textureView.getMeasuredWidth(), textureView.getMeasuredHeight()));
+        //Set preview size
+        cameraCreator.setPreviewSize(new Size(surfaceView.getMeasuredWidth(), surfaceView.getMeasuredHeight()));
         ImageReader.OnImageAvailableListener imageAvailableListener = new ImageReader.OnImageAvailableListener()
         {
             @Override
             public void onImageAvailable(ImageReader imageReader)
             {
+                //When picture is taken...
                 cameraCreator.getCamera().close();
                 Image image = imageReader.acquireNextImage();
                 ByteBuffer buffer = image.getPlanes()[0].getBuffer();
                 byte[] data = new byte[buffer.remaining()];
+                //Save picture data in this.bitmap
                 bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
             }
         };
         cameraCreator.createImageReader(imageAvailableListener);
-        sessionManager = new SessionManager(cameraCreator, textureView);
+        sessionManager = new SessionManager(cameraCreator, surfaceView);
     }
+
+    /**
+     * Start preview
+     */
     public void start()
     {
         sessionManager.createPreview();
+        previewThread = new Thread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                while (sessionManager.getSurfaceHolder() == null)
+                {
+                    try
+                    {
+                        Thread.sleep(100);
+                    }
+                    catch (InterruptedException e)
+                    {
+                        e.printStackTrace();
+                    }
+                }
+                while (sessionManager.getSurfaceHolder() != null)
+                {
+                    //How to get preview image???
+                    Canvas canvas = sessionManager.getSurfaceHolder().lockCanvas();
+                    //If preview image is already in this canvas...
+                    if (canvas != null)
+                    {
+                        Paint paint = new Paint();
+                        paint.setARGB(128,255,160,0);
+                        paint.setAntiAlias(true);
+                        paint.setStrokeWidth(2.0f);
+                        paint.setStyle(Paint.Style.STROKE);
+
+                        for (Rect rect : photoScanner.getRectList())
+                        {
+                            canvas.drawRect(rect, paint);
+                        }
+                    }
+                }
+            }
+        });
+        sessionManager.setSurfaceDestroyedHandler(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    previewThread.join();
+                }
+                catch (InterruptedException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        });
+        previewThread.start();
     }
+
     public void takePicture()
     {
         sessionManager.takePicture();
@@ -57,13 +128,20 @@ public class CameraScanner
 
     public Bitmap getScannedBitmap()
     {
-        PhotoScanner scanner = new PhotoScanner(bitmap);
-        scanner.setEngineManager(engineManager);
-        scanner.setFaceDataManager(faceDataManager);
-        Bitmap result = scanner.getScannedBitmap();
-        extractedFace = scanner.extractFace();
+        photoScanner = new PhotoScanner(bitmap);
+        photoScanner.setEngineManager(engineManager);
+        photoScanner.setFaceDataManager(faceDataManager);
+        //Get scanned bitmap by PhotoScanner
+        Bitmap result = photoScanner.getScannedBitmap();
+        //Save face
+        extractedFace = photoScanner.extractFace();
         return result;
     }
+
+    /**
+     * Get extracted face after calling getScannedBitmap
+     * @return Extracted face
+     */
     public Face extractFace()
     {
         return extractedFace;
@@ -78,6 +156,10 @@ public class CameraScanner
         this.faceDataManager = faceDataManager;
     }
 }
+
+/**
+ * Helper class for creating camera
+ */
 class CameraCreator
 {
     private CameraManager manager;
@@ -86,30 +168,38 @@ class CameraCreator
     private CameraDevice camera;
     private ImageReader imageReader;
 
+    /**
+     * Create {@link CameraCreator}
+     * @param context App activity
+     * @param cameraManager {@link CameraManager} to create camera
+     */
     CameraCreator(Context context, CameraManager cameraManager)
     {
         assert manager != null;
         assert context != null;
         manager = cameraManager;
 
+        //Start background thread
         HandlerThread thread = new HandlerThread("Camera2");
         thread.start();
         childHandler = new Handler(thread.getLooper());
         mainHandler = new Handler(context.getMainLooper());
 
-        try
+        try //Open camera
         {
             CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback()
             {
                 @Override
                 public void onOpened(CameraDevice cameraDevice)
                 {
+                    //Save the active camera
                     camera = cameraDevice;
                 }
 
                 @Override
                 public void onDisconnected(CameraDevice cameraDevice)
                 {
+                    //Close current camera
                     camera.close();
                     camera = null;
                 }
@@ -132,6 +222,11 @@ class CameraCreator
         }
 
     }
+
+    /**
+     * Create {@link ImageReader} and set listener on image available
+     * @param imageAvailableListener Listener on image available
+     */
     public void createImageReader(ImageReader.OnImageAvailableListener imageAvailableListener)
     {
         imageReader = ImageReader.newInstance(getPreviewSize().getWidth(), getPreviewSize().getHeight(),
@@ -148,6 +243,10 @@ class CameraCreator
         this.previewSize = previewSize;
     }
 
+    /**
+     * Get active camera
+     * @return {@link CameraDevice}
+     */
     public CameraDevice getCamera()
     {
         return camera;
@@ -158,30 +257,51 @@ class CameraCreator
         return childHandler;
     }
 
+    /**
+     * Get {@link ImageReader} created by createImageReader
+     * @return {@link ImageReader}
+     */
     public ImageReader getImageReader()
     {
         return imageReader;
     }
 }
-class SessionManager
+
+/**
+ * Manage sessions between camera and app
+ */
+class SessionManager implements SurfaceHolder.Callback
 {
     private CameraCreator cameraCreator;
-    private TextureView textureView;
+    private SurfaceView surfaceView;
+    private SurfaceHolder surfaceHolder;
     private CaptureRequest.Builder previewBuilder;
     private CameraCaptureSession captureSession;
+    private Runnable surfaceDestroyedHandler;
 
-    SessionManager(final CameraCreator creator, TextureView textureView)
+    /**
+     * Create {@link SessionManager}
+     * @param creator {@link CameraCreator} for camera data
+     * @param surfaceView {@link SurfaceView} to show preview
+     */
+    SessionManager(final CameraCreator creator, SurfaceView surfaceView)
     {
-        this.textureView = textureView;
+        this.surfaceView = surfaceView;
         cameraCreator = creator;
     }
+
+    /**
+     * Create preview session
+     */
     public void createPreview()
     {
         try
         {
             previewBuilder = cameraCreator.getCamera().createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            Surface surface = new Surface(textureView.getSurfaceTexture());
+            Surface surface = surfaceView.getHolder().getSurface();
+
             previewBuilder.addTarget(surface);
+
             cameraCreator.getCamera().createCaptureSession(Arrays.asList(surface, cameraCreator.getImageReader().getSurface()), new CameraCaptureSession.StateCallback()
             {
                 @Override
@@ -212,6 +332,10 @@ class SessionManager
             e.printStackTrace();
         }
     }
+
+    /**
+     * Take picture from camera
+     */
     public void takePicture()
     {
         CaptureRequest.Builder takePictureRequestBuilder;
@@ -227,5 +351,37 @@ class SessionManager
         catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void surfaceCreated(SurfaceHolder surfaceHolder)
+    {
+        this.surfaceHolder = surfaceHolder;
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2)
+    {
+
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder surfaceHolder)
+    {
+        this.surfaceHolder = null;
+        if (surfaceDestroyedHandler != null)
+        {
+            surfaceDestroyedHandler.run();
+        }
+    }
+
+    public SurfaceHolder getSurfaceHolder()
+    {
+        return surfaceHolder;
+    }
+
+    public void setSurfaceDestroyedHandler(Runnable surfaceDestroyedHandler)
+    {
+        this.surfaceDestroyedHandler = surfaceDestroyedHandler;
     }
 }

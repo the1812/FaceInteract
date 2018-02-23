@@ -1,5 +1,6 @@
 package com.helloworld.faceinteract;
 
+import android.util.Log;
 import com.arcsoft.facedetection.AFD_FSDKFace;
 import com.arcsoft.facerecognition.AFR_FSDKFace;
 
@@ -7,10 +8,14 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ *Stores name of face and multiple face data.
+ */
 public class Face
 {
     private String name;
     private List<AFR_FSDKFace> faces;
+
     public Face(String name)
     {
         this.name = name;
@@ -21,10 +26,10 @@ public class Face
         this(name);
         faces.add(sdkFace);
     }
-    public Face(String name, AFD_FSDKFace detectionFace)
-    {
-
-    }
+//    public Face(String name, AFD_FSDKFace detectionFace)
+//    {
+//        Log.e("Face","Not implemented yet.");
+//    }
     public String getName()
     {
         return name;

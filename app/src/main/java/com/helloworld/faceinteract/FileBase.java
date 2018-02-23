@@ -2,6 +2,9 @@ package com.helloworld.faceinteract;
 
 import java.io.File;
 
+/**
+ * Represents a file
+ */
 public abstract class FileBase
 {
     protected String path;

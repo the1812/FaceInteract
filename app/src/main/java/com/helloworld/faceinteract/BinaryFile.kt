@@ -4,7 +4,7 @@ import android.util.Log
 import java.io.IOException
 
 class BinaryFile(path: String) : FileBase(path), IFileBase<BinaryFile> {
-    lateinit var data: ByteArray
+    var data = ByteArray(0)
 
     init {
         if (file.length() > Int.MAX_VALUE) {

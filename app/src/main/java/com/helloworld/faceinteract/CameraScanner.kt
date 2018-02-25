@@ -30,7 +30,6 @@ internal constructor(context: Context, surfaceView: SurfaceView) {
     private var engineManager: EngineManager? = null
     private var faceDataManager: FaceDataManager? = null
     private val sessionManager: SessionManager
-    private var photoScanner: PhotoScanner? = null
     private val cameraCreator: CameraCreator
     private var bitmap: Bitmap? = null
     private var previewThread: Thread? = null
@@ -40,11 +39,11 @@ internal constructor(context: Context, surfaceView: SurfaceView) {
     //Save face
     val scannedBitmap: Bitmap
         get() {
-            photoScanner = PhotoScanner(bitmap!!)
-            photoScanner!!.setEngineManager(engineManager!!)
-            photoScanner!!.setFaceDataManager(faceDataManager!!)
-            val result = photoScanner!!.scannedBitmap
-            extractedFace = photoScanner!!.extractFace()
+            val photoScanner = PhotoScanner(bitmap!!)
+            photoScanner.setEngineManager(engineManager!!)
+            photoScanner.setFaceDataManager(faceDataManager!!)
+            val result = photoScanner.scannedBitmap
+            extractedFace = photoScanner.extractFace()
             return result
         }
 
@@ -56,7 +55,7 @@ internal constructor(context: Context, surfaceView: SurfaceView) {
         cameraCreator.previewSize = Size(surfaceView.measuredWidth, surfaceView.measuredHeight)
         val imageAvailableListener = ImageReader.OnImageAvailableListener { imageReader ->
             //When picture is taken...
-            cameraCreator.camera!!.close()
+            cameraCreator.camera.close()
             val image = imageReader.acquireNextImage()
             val buffer = image.planes[0].buffer
             val data = ByteArray(buffer.remaining())
@@ -83,17 +82,18 @@ internal constructor(context: Context, surfaceView: SurfaceView) {
             while (sessionManager.surfaceHolder != null) {
                 //How to get preview image???
                 val canvas = sessionManager.surfaceHolder!!.lockCanvas()
-                //If preview image is already in this canvas...
                 if (canvas != null) {
+
                     val paint = Paint()
                     paint.setARGB(128, 255, 160, 0)
                     paint.isAntiAlias = true
                     paint.strokeWidth = 2.0f
                     paint.style = Paint.Style.STROKE
 
-                    for (rect in photoScanner!!.getRectList()!!) {
-                        canvas.drawRect(rect, paint)
-                    }
+                    // TODO: get preview image -> scan -> draw rectangles
+//                    for (rect in photoScanner!!.getRectList()!!) {
+//                        canvas.drawRect(rect, paint)
+//                    }
                 }
             }
         }
@@ -141,20 +141,20 @@ internal class CameraCreator
 (context: Context?, private val manager: CameraManager?) {
     val childHandler: Handler
     private val mainHandler: Handler
-    var previewSize: Size? = null
+    var previewSize = Size(0, 0)
     /**
      * Get active camera
      *
      * @return [CameraDevice]
      */
-    var camera: CameraDevice? = null
+    lateinit var camera: CameraDevice
         private set
     /**
      * Get [ImageReader] created by createImageReader
      *
      * @return [ImageReader]
      */
-    var imageReader: ImageReader? = null
+    lateinit var imageReader: ImageReader
         private set
 
     init {
@@ -178,8 +178,7 @@ internal class CameraCreator
 
                 override fun onDisconnected(cameraDevice: CameraDevice) {
                     //Close current camera
-                    camera!!.close()
-                    camera = null
+                    camera.close()
                 }
 
                 override fun onError(cameraDevice: CameraDevice, i: Int) {
@@ -201,9 +200,9 @@ internal class CameraCreator
      * @param imageAvailableListener Listener on image available
      */
     fun createImageReader(imageAvailableListener: ImageReader.OnImageAvailableListener) {
-        imageReader = ImageReader.newInstance(previewSize!!.width, previewSize!!.height,
+        imageReader = ImageReader.newInstance(previewSize.width, previewSize.height,
                 ImageFormat.NV21, 1)
-        imageReader!!.setOnImageAvailableListener(imageAvailableListener, mainHandler)
+        imageReader.setOnImageAvailableListener(imageAvailableListener, mainHandler)
     }
 }
 
@@ -220,8 +219,8 @@ internal class SessionManager
 (private val cameraCreator: CameraCreator, private val surfaceView: SurfaceView) : SurfaceHolder.Callback {
     var surfaceHolder: SurfaceHolder? = null
         private set
-    private var previewBuilder: CaptureRequest.Builder? = null
-    private var captureSession: CameraCaptureSession? = null
+    private lateinit var previewBuilder: CaptureRequest.Builder
+    private lateinit var captureSession: CameraCaptureSession
     private var surfaceDestroyedHandler: (() -> Unit)? = null
 
     /**
@@ -229,19 +228,19 @@ internal class SessionManager
      */
     fun createPreview() {
         try {
-            previewBuilder = cameraCreator.camera!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+            previewBuilder = cameraCreator.camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             val surface = surfaceView.holder.surface
 
-            previewBuilder!!.addTarget(surface)
+            previewBuilder.addTarget(surface)
 
-            cameraCreator.camera!!.createCaptureSession(Arrays.asList(surface, cameraCreator.imageReader!!.surface), object : CameraCaptureSession.StateCallback() {
+            cameraCreator.camera.createCaptureSession(Arrays.asList(surface, cameraCreator.imageReader.surface), object : CameraCaptureSession.StateCallback() {
                 override fun onConfigured(cameraCaptureSession: CameraCaptureSession) {
                     captureSession = cameraCaptureSession
                     try {
-                        previewBuilder!!.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                        previewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
                         //                        previewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
-                        val previewRequest = previewBuilder!!.build()
-                        captureSession!!.setRepeatingRequest(previewRequest, null, cameraCreator.childHandler)
+                        val previewRequest = previewBuilder.build()
+                        captureSession.setRepeatingRequest(previewRequest, null, cameraCreator.childHandler)
                     } catch (e: CameraAccessException) {
                         e.printStackTrace()
                     }
@@ -264,12 +263,12 @@ internal class SessionManager
     fun takePicture() {
         val takePictureRequestBuilder: CaptureRequest.Builder
         try {
-            takePictureRequestBuilder = cameraCreator.camera!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-            takePictureRequestBuilder.addTarget(cameraCreator.imageReader!!.surface)
+            takePictureRequestBuilder = cameraCreator.camera.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+            takePictureRequestBuilder.addTarget(cameraCreator.imageReader.surface)
             takePictureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
             takePictureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
             val mCaptureRequest = takePictureRequestBuilder.build()
-            captureSession!!.capture(mCaptureRequest, null, cameraCreator.childHandler)
+            captureSession.capture(mCaptureRequest, null, cameraCreator.childHandler)
         } catch (e: CameraAccessException) {
             e.printStackTrace()
         }

@@ -9,7 +9,6 @@ import com.arcsoft.facerecognition.AFR_FSDKEngine
 import com.arcsoft.facerecognition.AFR_FSDKError
 import com.arcsoft.facerecognition.AFR_FSDKFace
 import com.arcsoft.facerecognition.AFR_FSDKMatching
-import java.util.*
 
 /**
  * Scan faces in a photo
@@ -18,9 +17,13 @@ class PhotoScanner internal constructor(private val bitmap: Bitmap) {
     private var nv21Data = ByteArray(bitmap.width * bitmap.height * 3 / 2)
     private var engineManager: EngineManager? = null
     private var faceDataManager: FaceDataManager? = null
-    private var rectList: MutableList<Rect>? = null
-    private var sdkFaces: List<AFD_FSDKFace>? = null
-    private var infoList: MutableList<String>? = null
+    private var rectList: MutableList<Rect> = ArrayList()
+    private var sdkFaces: List<AFD_FSDKFace> = ArrayList()
+    private var infoList: MutableList<String> = ArrayList()
+    /**
+     * Minimum score for face recognition
+     */
+    private val matchMinimumScore = 0.7f
 
     // Create new bitmap
     //Draw original bitmap
@@ -36,7 +39,7 @@ class PhotoScanner internal constructor(private val bitmap: Bitmap) {
             paint.strokeWidth = 2.0f
             paint.style = Paint.Style.STROKE
             canvas.drawBitmap(bitmap, 0f, 0f, null)
-            for (rect in rectList!!) {
+            for (rect in rectList) {
                 canvas.drawRect(rect, paint)
             }
             return bitmap
@@ -59,18 +62,18 @@ class PhotoScanner internal constructor(private val bitmap: Bitmap) {
         for (j in 0 until height) {
             for (i in 0 until width) {
 
-                val R = argb[index] and 0xff0000 shr 16
-                val G = argb[index] and 0xff00 shr 8
-                val B = argb[index] and 0xff
+                val r = argb[index] and 0xff0000 shr 16
+                val g = argb[index] and 0xff00 shr 8
+                val b = argb[index] and 0xff
 
-                val Y = (66 * R + 129 * G + 25 * B + 128 shr 8) + 16
-                val U = (-38 * R - 74 * G + 112 * B + 128 shr 8) + 128
-                val V = (112 * R - 94 * G - 18 * B + 128 shr 8) + 128
+                val y = (66 * r + 129 * g + 25 * b + 128 shr 8) + 16
+                val u = (-38 * r - 74 * g + 112 * b + 128 shr 8) + 128
+                val v = (112 * r - 94 * g - 18 * b + 128 shr 8) + 128
 
-                nv21Data[yIndex++] = (if (Y < 0) 0 else if (Y > 255) 255 else Y).toByte()
+                nv21Data[yIndex++] = (if (y < 0) 0 else if (y > 255) 255 else y).toByte()
                 if (j % 2 == 0 && index % 2 == 0) {
-                    nv21Data[uvIndex++] = (if (V < 0) 0 else if (V > 255) 255 else V).toByte()
-                    nv21Data[uvIndex++] = (if (U < 0) 0 else if (U > 255) 255 else U).toByte()
+                    nv21Data[uvIndex++] = (if (v < 0) 0 else if (v > 255) 255 else v).toByte()
+                    nv21Data[uvIndex++] = (if (u < 0) 0 else if (u > 255) 255 else u).toByte()
                 }
                 index++
             }
@@ -96,9 +99,9 @@ class PhotoScanner internal constructor(private val bitmap: Bitmap) {
         rectList = ArrayList()
         infoList = ArrayList()
         if (errorCode == AFD_FSDKError.MOK) {
-            for (sdkFace in sdkFaces!!) {
-                rectList!!.add(sdkFace.rect)
-                infoList!!.add(match(toRecognitionFace(sdkFace))!!)
+            for (sdkFace in sdkFaces) {
+                rectList.add(sdkFace.rect)
+                infoList.add(match(toRecognitionFace(sdkFace)))
             }
         } else {
             Log.e("Error", "Face detection failed")
@@ -111,21 +114,25 @@ class PhotoScanner internal constructor(private val bitmap: Bitmap) {
      * @param sdkFace Specific face
      * @return Name of face, null if not found
      */
-    private fun match(sdkFace: AFR_FSDKFace?): String? {
+    private fun match(sdkFace: AFR_FSDKFace?): String {
+        if (sdkFace == null || engineManager == null)
+        {
+            return ""
+        }
         for (face in faceDataManager!!.faces) {
             val matching = AFR_FSDKMatching()
             val errorCode = engineManager!!.faceRecognitionEngine
                     .AFR_FSDK_FacePairMatching(face.firstSdkFace, sdkFace, matching)
                     .code
             if (errorCode == AFR_FSDKError.MOK) {
-                if (matching.score >= MatchMinimumScore) {
+                if (matching.score >= matchMinimumScore) {
                     return face.name
                 }
             } else {
                 Log.e("Error", "Face matching failed")
             }
         }
-        return null
+        return ""
     }
 
     /**
@@ -135,6 +142,10 @@ class PhotoScanner internal constructor(private val bitmap: Bitmap) {
      * @return Recognition face
      */
     private fun toRecognitionFace(detectionFace: AFD_FSDKFace): AFR_FSDKFace? {
+        if (engineManager == null)
+        {
+            return null
+        }
         val recognitionFace = AFR_FSDKFace()
         val errorCode = engineManager!!.faceRecognitionEngine
                 .AFR_FSDK_ExtractFRFeature(nv21Data,
@@ -142,17 +153,20 @@ class PhotoScanner internal constructor(private val bitmap: Bitmap) {
                         ImageFormat.NV21, detectionFace.rect,
                         AFR_FSDKEngine.AFR_FOC_0, recognitionFace)
                 .code
-        if (errorCode == AFR_FSDKError.MOK) {
-            return recognitionFace
-        } else {
+        return if (errorCode == AFR_FSDKError.MOK)
+        {
+            recognitionFace
+        }
+        else
+        {
             Log.e("Photo Scanner", "Convert failed")
-            return null
+            null
         }
     }
 
-    fun getRectList(): List<Rect>? {
-        return rectList
-    }
+//    fun getRectList(): List<Rect>? {
+//        return rectList
+//    }
 
     fun setEngineManager(engineManager: EngineManager) {
         this.engineManager = engineManager
@@ -168,13 +182,7 @@ class PhotoScanner internal constructor(private val bitmap: Bitmap) {
      * @return Face
      */
     fun extractFace(): Face? {
-        return if (sdkFaces!!.isEmpty()) null else Face(infoList!![0], toRecognitionFace(sdkFaces!![0])!!)
+        return if (sdkFaces.isEmpty()) null else Face(infoList[0], toRecognitionFace(sdkFaces[0])!!)
     }
 
-    companion object {
-        /**
-         * Minimum score for face recognition
-         */
-        var MatchMinimumScore = 0.7f
-    }
 }

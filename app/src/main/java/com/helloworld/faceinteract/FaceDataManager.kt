@@ -24,9 +24,7 @@ class FaceDataManager(private val storagePath: String) {
      * @param face Face that containing the name
      * @return Name of data file
      */
-    private fun getDataFileName(face: Face): String {
-        return face.name + ".data"
-    }
+    private fun getDataFileName(face: Face) = face.name + ".data"
 
     /**
      * Find saved face that match the current face

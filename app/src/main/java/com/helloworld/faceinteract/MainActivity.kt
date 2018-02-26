@@ -59,12 +59,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openCamera() {
-        permissionHelper.requestPermission(Manifest.permission.CAMERA) {
+        permissionHelper.requestPermission(Manifest.permission.CAMERA)
+        {
             val cameraScanner = CameraScanner(this, surfaceView)
             cameraScanner.setEngineManager(engineManager)
             cameraScanner.setFaceDataManager(faceDataManager)
             cameraScanner.start()
-            surfaceView!!.setOnClickListener {
+            surfaceView.setOnClickListener {
                 cameraScanner.takePicture()
                 imageView!!.setImageBitmap(cameraScanner.scannedBitmap)
                 imageView!!.visibility = View.VISIBLE

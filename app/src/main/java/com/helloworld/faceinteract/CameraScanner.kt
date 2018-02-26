@@ -233,7 +233,9 @@ internal class SessionManager
 
             previewBuilder.addTarget(surface)
 
-            cameraCreator.camera.createCaptureSession(Arrays.asList(surface, cameraCreator.imageReader.surface), object : CameraCaptureSession.StateCallback() {
+            cameraCreator.camera.createCaptureSession(
+                    Arrays.asList(surface, cameraCreator.imageReader.surface),
+                    object : CameraCaptureSession.StateCallback() {
                 override fun onConfigured(cameraCaptureSession: CameraCaptureSession) {
                     captureSession = cameraCaptureSession
                     try {

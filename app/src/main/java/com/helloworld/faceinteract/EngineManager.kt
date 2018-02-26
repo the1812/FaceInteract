@@ -29,11 +29,12 @@ class EngineManager {
      */
     init {
 
-        val error = faceRecognitionEngine.AFR_FSDK_InitialEngine(AppId, FaceRecognitionKey)
-                .code != AFR_FSDKError.MOK &&
+        val error =
+                faceRecognitionEngine.AFR_FSDK_InitialEngine(AppId, FaceRecognitionKey)
+                        .code != 0 ||
                 faceDetectionEngine.AFD_FSDK_InitialFaceEngine(AppId, FaceDetectionKey,
                         AFD_FSDKEngine.AFD_OPF_0_HIGHER_EXT, 16, 25)
-                        .code != AFD_FSDKError.MOK &&
+                        .code != 0 ||
                 faceTrackingEngine.AFT_FSDK_InitialFaceEngine(AppId, FaceTrackingKey,
                         AFT_FSDKEngine.AFT_OPF_0_HIGHER_EXT, 16, 25)
                         .code != 0

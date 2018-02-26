@@ -67,9 +67,9 @@ class MainActivity : AppCompatActivity() {
             cameraScanner.start()
             surfaceView.setOnClickListener {
                 cameraScanner.takePicture()
-                imageView!!.setImageBitmap(cameraScanner.scannedBitmap)
-                imageView!!.visibility = View.VISIBLE
-                surfaceView!!.visibility = View.GONE
+                imageView.setImageBitmap(cameraScanner.scannedBitmap)
+                imageView.visibility = View.VISIBLE
+                surfaceView.visibility = View.GONE
                 loadFace(cameraScanner.extractFace())
             }
         }
@@ -105,21 +105,24 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadFace(newFace: Face?) {
         currentFace = newFace
-        if (currentFace != null) {
-            buttonSaveFace!!.visibility = View.GONE
-            textView!!.text = currentFace!!.name
-        } else {
-            buttonSaveFace!!.visibility = View.VISIBLE
+        if (currentFace == null || currentFace?.name.isNullOrEmpty())
+        {
+            buttonSaveFace.visibility = View.VISIBLE
+        }
+        else
+        {
+            buttonSaveFace.visibility = View.GONE
+            textView.text = currentFace?.name
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
+    override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
+        super.onActivityResult(requestCode, resultCode, intent)
         Log.d("Result", "" + requestCode)
         if (requestCode == pickPhotoRequest &&
                 resultCode == Activity.RESULT_OK &&
-                data?.data != null) {
-            val uri = data.data
+                intent?.data != null) {
+            val uri = intent.data
             Log.d("Uri", uri.toString())
             try {
                 val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, uri)

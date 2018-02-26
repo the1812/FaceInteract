@@ -95,7 +95,7 @@ class PhotoScanner internal constructor(private val bitmap: Bitmap) {
                         bitmap.width, bitmap.height,
                         AFD_FSDKEngine.CP_PAF_NV21, sdkFaces)
                 .code
-
+        sdkFaces = ArrayList(sdkFaces)
         rectList = ArrayList()
         infoList = ArrayList()
         if (errorCode == AFD_FSDKError.MOK) {

@@ -28,7 +28,6 @@ class EngineManager {
      * Create engines
      */
     init {
-
         val response = listOf(
                 faceRecognitionEngine.AFR_FSDK_InitialEngine(AppId, FaceRecognitionKey).code,
                 faceDetectionEngine.AFD_FSDK_InitialFaceEngine(AppId, FaceDetectionKey, AFD_FSDKEngine.AFD_OPF_0_HIGHER_EXT, 16, 25).code,

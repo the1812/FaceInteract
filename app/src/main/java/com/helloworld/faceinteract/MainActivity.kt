@@ -18,8 +18,8 @@ import java.io.IOException
 class MainActivity : AppCompatActivity() {
     private val pickPhotoRequest = 1
     private lateinit var faceDataManager: FaceDataManager
-    private lateinit var engineManager: EngineManager
-    private lateinit var permissionHelper: PermissionHelper
+    private val engineManager= EngineManager()
+    private val permissionHelper= PermissionHelper(this)
     private var currentFace: Face? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,9 +27,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         faceDataManager = FaceDataManager("/face-interact")
-        engineManager = EngineManager()
-
-        permissionHelper = PermissionHelper(this)
 
         buttonSelectPhoto.setOnClickListener {
             imageView.visibility = View.VISIBLE
@@ -98,9 +95,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun saveFace() {
-        if (currentFace?.name != null) {
+        try {
             faceDataManager.saveFace(currentFace!!)
-        }
+        } catch (e:NullPointerException){ }
     }
 
     private fun loadFace(newFace: Face?) {

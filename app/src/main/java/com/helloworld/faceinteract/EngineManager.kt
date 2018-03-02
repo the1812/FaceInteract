@@ -28,17 +28,11 @@ class EngineManager {
      * Create engines
      */
     init {
-
-        val error =
-                faceRecognitionEngine.AFR_FSDK_InitialEngine(AppId, FaceRecognitionKey)
-                        .code != 0 ||
-                faceDetectionEngine.AFD_FSDK_InitialFaceEngine(AppId, FaceDetectionKey,
-                        AFD_FSDKEngine.AFD_OPF_0_HIGHER_EXT, 16, 25)
-                        .code != 0 ||
-                faceTrackingEngine.AFT_FSDK_InitialFaceEngine(AppId, FaceTrackingKey,
-                        AFT_FSDKEngine.AFT_OPF_0_HIGHER_EXT, 16, 25)
-                        .code != 0
-        if (error) {
+        val response = listOf(
+                faceRecognitionEngine.AFR_FSDK_InitialEngine(AppId, FaceRecognitionKey).code,
+                faceDetectionEngine.AFD_FSDK_InitialFaceEngine(AppId, FaceDetectionKey, AFD_FSDKEngine.AFD_OPF_0_HIGHER_EXT, 16, 25).code,
+                faceTrackingEngine.AFT_FSDK_InitialFaceEngine(AppId, FaceTrackingKey, AFT_FSDKEngine.AFT_OPF_0_HIGHER_EXT, 16, 25).code)
+        if (response.any { it != 0 }) {
             Log.e("Error", "Error init engine")
         } else {
             Log.d("Info", "Engine loaded")
